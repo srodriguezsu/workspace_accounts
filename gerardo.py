@@ -25,6 +25,22 @@ def remove_tildes(text):
     return ''.join(result)
 
 
+def remove_tildes_and_n(text):
+    """Removes the accents and 'ñ'.
+
+    :param str text: The text with vowels with accents.
+
+    :return str: The text without the accents.
+    """
+    result = []
+    for char in text:
+        # Normalize and remove accents from other characters
+        decomposed = unicodedata.normalize('NFD', char)
+        filtered = ''.join(c for c in decomposed if unicodedata.category(c) != 'Mn')
+        result.append(filtered)
+    return ''.join(result)
+
+
 def name_for_email(names):
     """
     Generate a formatted email prefix from a list of names.
@@ -40,9 +56,9 @@ def name_for_email(names):
         >>> name_for_email(('Gomez', 'Ruiz'))
         'gomezr'
     """
-    output = names[0].lower()
+    output = remove_tildes_and_n(names[0].lower())
     for i in range(1, len(names)):
-        output += names[i][0].lower()
+        output += remove_tildes_and_n(names[i][0].lower())
     return output
 
 
@@ -91,8 +107,14 @@ def decompose_fullname(fullname):
     last_name = fullname_parts[half:][::-1]
     last_name = tuple(map(format_name, last_name))
 
-    email = f"{name[0].lower()}.{name_for_email(last_name)}@iegerardovalencia.edu.co"
+    email = f"{remove_tildes_and_n(name[0].lower())}.{name_for_email(last_name)}@iegerardovalencia.edu.co"
     return ' '.join(name), ' '.join(last_name), email
+
+
+def get_initial(full_name):
+    full_name_parts = full_name.split()
+    full_name_parts = tuple(map(lambda x: remove_tildes_and_n(x)[0], full_name_parts))
+    return ''.join(full_name_parts)
 
 
 # Access environment variables
@@ -112,7 +134,7 @@ db_connection = mysql.connector.connect(
 cursor = db_connection.cursor()
 
 # Execute the query
-cursor.execute("SELECT Cod_Matricula, Nombre_alumno  FROM Estudiante2025")
+cursor.execute("SELECT Cod_Matricula, Nombre_alumno  FROM Estudiante2025 WHERE Estado = ''")
 
 # Fetch all rows from the query result
 rows = cursor.fetchall()
@@ -123,14 +145,24 @@ columns = [i[0] for i in cursor.description]
 # Create a DataFrame
 df = pd.DataFrame(rows, columns=columns)
 
+
 # Close the cursor and connection
 cursor.close()
 db_connection.close()
 # Apply the decompose_fullname function to the 'Nombre_alumno' column
 df[['First Name [Required]', 'Last Name [Required]', 'Email Address [Required]']] = df['Nombre_alumno'].apply(
     lambda x: pd.Series(decompose_fullname(x)))
-df['Password Hash Function [UPLOAD ONLY]'] = df['Cod_Matricula'].astype(str).str.replace(r'\D', '', regex=True)
+
+df[['initials']] = df['Nombre_alumno'].apply(
+    lambda x: pd.Series(get_initial(x)))
+
+df['Org Unit Path [Required]'] = '/'
+df['Password [Required]'] = df['initials'] + df['Cod_Matricula'].astype(str).str.replace(r'\D', '', regex=True)
+
+df['Change Password at Next Sign-In'] = True
+
 df.drop(['Cod_Matricula'], axis=1, inplace=True)
+df.drop(['initials'], axis=1, inplace=True)
 df.drop(['Nombre_alumno'], axis=1, inplace=True)
-print(df.columns)
+print(df[['First Name [Required]', 'Password [Required]']])
 df.to_csv('new_students.csv', index=False)
