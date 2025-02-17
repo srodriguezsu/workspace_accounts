@@ -26,6 +26,20 @@ def remove_tildes(text):
 
 
 def name_for_email(names):
+    """
+    Generate a formatted email prefix from a list of names.
+
+    This function takes a list of names (given as a list of strings) and constructs
+    an email prefix by concatenating the first name in lowercase and the first
+    letter of each subsequent name in lowercase.
+
+    :param tuple names: A list of names to generate the email prefix from.
+    :return str: A string representing the generated email prefix.
+
+    :example:
+        >>> name_for_email(('Gomez', 'Ruiz'))
+        'gomezr'
+    """
     output = names[0].lower()
     for i in range(1, len(names)):
         output += names[i][0].lower()
@@ -33,9 +47,40 @@ def name_for_email(names):
 
 
 def format_name(name):
+    """
+    Format a name by removing any tildes and capitalizing the first letter.
+
+    This function removes tildes (accent marks) from characters in the name and
+    then capitalizes the first letter of the name, returning the formatted version.
+
+    :param str name: The name to be formatted.
+    :return str: The formatted name with no tildes and capitalized first letter.
+
+    :example:
+        >>> format_name('JOSÉ')
+        'Jose'
+    """
     return remove_tildes(name).capitalize()
 
+
 def decompose_fullname(fullname):
+    """
+    Decompose a full name into its components and generate an email address.
+
+    This function splits the full name into first and last name parts, formats
+    each name, and creates an email address using the first name and the first
+    letter of each last name part. The result is returned as a tuple with
+    formatted first name, last name, and email address.
+
+    :param str fullname: A full name to be decomposed and formatted.
+                         The name should be a string with the full name in the format
+                         "First Last" or "First Middle Last".
+    :return tuple: A tuple containing the formatted first name, last name, and email address.
+
+    :example:
+        >>> decompose_fullname('Juan Pablo Gomez Ruiz')
+        ('Juan Pablo', 'Gomez Ruiz', 'juan.gomezr@iegerardovalencia.edu.co')
+    """
     fullname_parts = fullname.split()[::-1]
     half = len(fullname_parts) // 2
     # First name part
@@ -49,10 +94,6 @@ def decompose_fullname(fullname):
     email = f"{name[0].lower()}.{name_for_email(last_name)}@iegerardovalencia.edu.co"
     return ' '.join(name), ' '.join(last_name), email
 
-
-df = pd.read_csv('users.csv')
-# df.dropna(axis=1, inplace=True, how='all')
-print(df.columns)
 
 # Access environment variables
 db_host = os.getenv("DB_HOST")
@@ -86,6 +127,10 @@ df = pd.DataFrame(rows, columns=columns)
 cursor.close()
 db_connection.close()
 # Apply the decompose_fullname function to the 'Nombre_alumno' column
-df[['Name', 'Last_Name', 'Email']] = df['Nombre_alumno'].apply(lambda x: pd.Series(decompose_fullname(x)))
-
-print(df[['Last_Name', 'Email']])
+df[['First Name [Required]', 'Last Name [Required]', 'Email Address [Required]']] = df['Nombre_alumno'].apply(
+    lambda x: pd.Series(decompose_fullname(x)))
+df['Password Hash Function [UPLOAD ONLY]'] = df['Cod_Matricula'].astype(str).str.replace(r'\D', '', regex=True)
+df.drop(['Cod_Matricula'], axis=1, inplace=True)
+df.drop(['Nombre_alumno'], axis=1, inplace=True)
+print(df.columns)
+df.to_csv('new_students.csv', index=False)
