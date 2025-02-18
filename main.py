@@ -192,7 +192,7 @@ def process_student_data(connection, domain):
     df.drop(['Nombre_alumno'], axis=1, inplace=True)
 
     # Save the DataFrame to a CSV file
-    df.to_csv(f'new_students_{domain}.csv', index=False)
+    df.to_csv(f'out/new_students_{domain.split('.')[0]}.csv', index=False)
 
     return df
 
@@ -249,10 +249,9 @@ def process_teachers_data(connection, domain):
     df.drop(['Nombre'], axis=1, inplace=True)
 
     # Save the DataFrame to a CSV file
-    df.to_csv(f'new_teachers_{domain}.csv', index=False)
+    df.to_csv(f'out/new_teachers_{domain.split('.')[0]}.csv', index=False)
 
     return df
 
 
-# df = process_student_data(db_connection)
-df = process_teachers_data(db_connection, "lola.edu.co")
+df = process_student_data(db_connection, "lola.edu.co")
